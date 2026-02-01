@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulación 3D: Análisis de Convección - IB Math IA</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --text: #1f2937;
+            --primary: #2563eb;
+            --secondary: #10b981;
+            --panel-bg: #f9fafb;
+            --border: #e5e7eb;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            width: 100%;
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        }
+
+        h1 { margin: 0; font-size: 1.5rem; font-weight: 800; }
+        .subtitle { font-size: 0.9rem; color: #6b7280; margin-top: 0.5rem; }
+
+        /* --- LAYOUT --- */
+        .controls-wrapper {
+            width: 100%;
+            max-width: 1200px;
+            padding: 1.5rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .tabs {
+            display: flex;
+            background: var(--panel-bg);
+            padding: 0.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            width: fit-content;
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #6b7280;
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            background: white;
+            color: var(--primary);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .slider-box {
+            background: white;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .h-value-display {
+            font-family: monospace;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+            background: #eff6ff;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+        }
+
+        input[type=range] {
+            width: 100%;
+            cursor: pointer;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 5px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background .15s ease-in-out;
+        }
+
+        .dashboard {
+            width: 100%;
+            max-width: 1200px;
+            padding: 0 1.5rem 2rem 1.5rem;
+            display: grid;
+            grid-template-rows: auto auto;
+            gap: 2rem;
+        }
+
+        .chart-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        }
+
+        #plot3d { width: 100%; height: 500px; }
+        #plot2d { width: 100%; height: 350px; }
+
+        .stats-bar {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #f1f5f9;
+        }
+        .stat-item { text-align: center; flex: 1; }
+        .stat-label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; }
+        .stat-num { font-size: 1.1rem; font-weight: 700; color: #334155; }
+
+        @media (max-width: 768px) {
+            .controls-wrapper { grid-template-columns: 1fr; }
+            #plot3d { height: 350px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Simulación Térmica Interactiva - Disipador con Aletas Radiales</h1>
+        <div class="subtitle">Evaluación Interna de Matemáticas IB (NS)</div>
+    </header>
+
+    <div class="controls-wrapper">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="setCase(1)">Caso 1: e > t (N=53, Óptimo)</button>
+            <button class="tab-btn" onclick="setCase(2)">Caso 3: e < t (N=6, Subóptimo)</button>
+        </div>
+
+        <div class="slider-box">
+            <div class="slider-header">
+                <span style="font-weight:600; color:#475569;">Coeficiente de Convección (h)</span>
+                <span id="h-display" class="h-value-display">40 W/m²K</span>
+            </div>
+            <input type="range" id="h-slider" min="5" max="100" step="1" value="40">
+            <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#94a3b8; margin-top:0.5rem;">
+                <span>Convección Natural Débil (h=5)</span>
+                <span>Convección Forzada Fuerte (h=100)</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard">
+        <!-- GRÁFICO 3D: SUPERFICIE CON CORTE DINÁMICO -->
+        <div class="chart-card">
+            <div style="margin-bottom:0.5rem; font-weight:700; color:#334155;">Superficie Térmica T(t, h) - Evolución de Temperatura</div>
+            <div id="plot3d"></div>
+        </div>
+
+        <!-- GRÁFICO 2D: CORTE PRECISO -->
+        <div class="chart-card">
+            <div style="margin-bottom:0.5rem; font-weight:700; color:#334155;">Curva de Temperatura T(t) para h seleccionado</div>
+            <div id="plot2d"></div>
+            
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <div class="stat-label">T∞ (Equilibrio)</div>
+                    <div class="stat-num"><span id="val-teq">--</span>°C</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">τ (Constante de Tiempo)</div>
+                    <div class="stat-num"><span id="val-tau">--</span> s</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Tiempo a 95% T∞</div>
+                    <div class="stat-num"><span id="val-t95">--</span> s</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Potencia Disipada</div>
+                    <div class="stat-num">10 W</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * CONSTANTES FÍSICAS DEL MODELO
+         * Extraídas del documento de Evaluación Interna
+         */
+        const PHYS = {
+            P: 10,              // Potencia disipada [W]
+            T_env: 25,          // Temperatura ambiente [°C]
+            T_0: 25,            // Temperatura inicial del disipador [°C]
+            rho: 2700,          // Densidad del aluminio [kg/m³]
+            c: 900,             // Calor específico del aluminio [J/(kg·K)]
+            V_0: 3.7e-5,        // Volumen total fijo [m³]
+            m: 0.1              // Masa total [kg]
+        };
+
+        // Calculamos mc correctamente
+        PHYS.mc = PHYS.m * PHYS.c; // = 0.1 × 900 = 90 [J/K]
+
+        /**
+         * DISEÑOS GEOMÉTRICOS
+         * Caso 1: e > t (4mm > 1.5mm) - N=53, A=0.039736 m²
+         * Caso 3: e < t (4mm < 5mm) - N=6, A=0.0171138232 m²
+         */
+        const DESIGNS = {
+            1: { 
+                name: "Caso 1 (e > t): N=53", 
+                A: 0.039736,
+                N: 53,
+                e: 4,
+                t: 1.5,
+                col: '#10b981'
+            },
+            2: { 
+                name: "Caso 3 (e < t): N=6", 
+                A: 0.0171138232,
+                N: 6,
+                e: 4,
+                t: 5,
+                col: '#f59e0b'
+            }
+        };
+
+        let state = {
+            caseId: 1,
+            h: 40
+        };
+
+        /**
+         * ECUACIÓN DE TEMPERATURA COMPLETA
+         * T(t) = T_env + P/(hA) - [P/(hA) - T_0 + T_env] · e^(-(hA/mc)·t)
+         * 
+         * Forma simplificada:
+         * T(t) = T_env + θ_∞ - (θ_∞ - θ_0) · e^(-k·t)
+         * donde:
+         *   θ_∞ = P/(hA)
+         *   θ_0 = T_0 - T_env
+         *   k = hA/mc
+         */
+        function T(t, h, A) {
+            const theta_inf = PHYS.P / (h * A);           // Exceso de temperatura en equilibrio
+            const theta_0 = PHYS.T_0 - PHYS.T_env;        // Exceso inicial (= 0 si empezamos a T_amb)
+            const k = (h * A) / PHYS.mc;                  // Constante de velocidad
+            
+            const theta_t = theta_inf - (theta_inf - theta_0) * Math.exp(-k * t);
+            return PHYS.T_env + theta_t;
+        }
+
+        /**
+         * Calcular temperatura de equilibrio: T_∞ = T_env + P/(hA)
+         */
+        function T_equilibrio(h, A) {
+            return PHYS.T_env + (PHYS.P / (h * A));
+        }
+
+        /**
+         * Calcular constante de tiempo: τ = mc/(hA)
+         */
+        function tau(h, A) {
+            return PHYS.mc / (h * A);
+        }
+
+        /**
+         * Calcular tiempo para llegar al 95% de T_∞
+         * En t = 3τ, se alcanza el ~95% (e^-3 ≈ 0.05)
+         */
+        function tiempo_95(h, A) {
+            return 3 * tau(h, A);
+        }
+
+        /**
+         * Generar matriz para superficie 3D
+         * El rango de tiempo se ajusta según el diseño para capturar 
+         * aproximadamente 5τ (donde se alcanza ~99.3% del equilibrio)
+         */
+        function genSurface(A) {
+            const time = [];
+            const hArr = [];
+            const z = [];
+
+            // Rango de h de 5 a 100 W/m²K
+            for(let h_val = 5; h_val <= 100; h_val += 2) hArr.push(h_val);
+            
+            // Calcular τ_max (con h mínimo = 5, ya que τ es inversamente proporcional a h)
+            const tau_max = PHYS.mc / (5 * A);
+            
+            // Tiempo adaptativo: mostrar hasta 5τ_max para capturar la convergencia
+            // Mínimo 600s, máximo 3500s para mantener visualización útil
+            const t_max = Math.min(Math.max(5 * tau_max, 600), 3500);
+            const t_step = Math.max(10, Math.floor(t_max / 100)); // ~100 puntos
+            
+            for(let t = 0; t <= t_max; t += t_step) time.push(t);
+
+            for(let i = 0; i < hArr.length; i++) {
+                const row = [];
+                for(let j = 0; j < time.length; j++) {
+                    row.push(T(time[j], hArr[i], A));
+                }
+                z.push(row);
+            }
+            return { time, hArr, z };
+        }
+
+        /**
+         * Generar línea específica para un valor h exacto
+         * Se ajusta al mismo rango de tiempo que la superficie 3D
+         */
+        function genSlice(h, A) {
+            const t = [];
+            const z = [];
+            
+            // Usar el mismo τ_max que en genSurface para consistencia
+            const tau_max = PHYS.mc / (5 * A);
+            const t_max = Math.min(Math.max(5 * tau_max, 600), 3500);
+            
+            for(let i = 0; i <= t_max; i += 5) {
+                t.push(i);
+                z.push(T(i, h, A));
+            }
+            return { t, z };
+        }
+
+        /**
+         * Renderizar gráficos
+         */
+        function render() {
+            const d = DESIGNS[state.caseId];
+            const surf = genSurface(d.A);
+            const slice = genSlice(state.h, d.A);
+
+            // Calcular rango dinámico del eje Z basado en los datos
+            const T_min = PHYS.T_env;
+            const T_max_case1 = T_equilibrio(5, DESIGNS[1].A); // Máximo con h mínimo
+            const T_max_case2 = T_equilibrio(5, DESIGNS[2].A);
+            const T_max = Math.max(T_max_case1, T_max_case2) + 5;
+
+            // --- GRÁFICO 3D ---
+            const data3d = [
+                // 1. Superficie completa T(t, h)
+                {
+                    z: surf.z,
+                    x: surf.time,
+                    y: surf.hArr,
+                    type: 'surface',
+                    colorscale: 'Viridis',
+                    opacity: 0.85,
+                    showscale: true,
+                    colorbar: {
+                        title: 'T (°C)',
+                        len: 0.7
+                    },
+                    hovertemplate: 'h: %{y:.0f} W/m²K<br>t: %{x:.0f}s<br>T: %{z:.2f}°C<extra></extra>'
+                },
+                // 2. Línea de Corte para h actual (línea roja)
+                {
+                    type: 'scatter3d',
+                    mode: 'lines',
+                    x: slice.t,
+                    y: Array(slice.t.length).fill(state.h),
+                    z: slice.z,
+                    line: { width: 8, color: '#ef4444' },
+                    name: `Corte h=${state.h}`,
+                    hovertemplate: 't: %{x:.0f}s<br>T: %{z:.2f}°C<extra></extra>'
+                }
+            ];
+
+            const layout3d = {
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                margin: {l: 0, r: 0, b: 0, t: 0},
+                scene: {
+                    xaxis: {
+                        title: 'Tiempo t (s)',
+                        gridcolor: '#e2e8f0'
+                    },
+                    yaxis: {
+                        title: 'Coeficiente h (W/m²K)',
+                        gridcolor: '#e2e8f0'
+                    },
+                    zaxis: {
+                        title: 'Temperatura T (°C)',
+                        gridcolor: '#e2e8f0',
+                        range: [T_min - 2, T_max]
+                    },
+                    camera: { 
+                        eye: {x: -1.5, y: -1.5, z: 1.0},
+                        center: {x: 0, y: 0, z: -0.1}
+                    }
+                },
+                showlegend: true,
+                legend: {
+                    x: 0.7,
+                    y: 0.95,
+                    bgcolor: 'rgba(255,255,255,0.9)',
+                    bordercolor: '#e5e7eb',
+                    borderwidth: 1
+                }
+            };
+
+            Plotly.react('plot3d', data3d, layout3d, {displayModeBar: false});
+
+            // --- GRÁFICO 2D ---
+            const T_inf = T_equilibrio(state.h, d.A);
+            const tau_val = tau(state.h, d.A);
+            
+            // Punto en t = τ (donde la diferencia se reduce a 36.8%)
+            const T_at_tau = T(tau_val, state.h, d.A);
+            
+            // Obtener el rango de tiempo usado
+            const t_max = slice.t[slice.t.length - 1];
+
+            const data2d = [
+                // Curva T(t)
+                {
+                    x: slice.t,
+                    y: slice.z,
+                    mode: 'lines',
+                    line: {width: 3, color: d.col},
+                    name: `${d.name}`,
+                    hovertemplate: 't: %{x:.0f}s<br>T: %{y:.2f}°C<extra></extra>'
+                },
+                // Línea de equilibrio T_∞
+                {
+                    x: [0, t_max],
+                    y: [T_inf, T_inf],
+                    mode: 'lines',
+                    line: {dash: 'dash', width: 2, color: '#64748b'},
+                    name: `T∞ = ${T_inf.toFixed(2)}°C`,
+                    hoverinfo: 'skip'
+                },
+                // Punto en t = τ
+                {
+                    x: [tau_val],
+                    y: [T_at_tau],
+                    mode: 'markers',
+                    marker: {size: 10, color: '#ef4444', symbol: 'circle'},
+                    name: `t = τ = ${tau_val.toFixed(1)}s`,
+                    hovertemplate: 't=τ: %{x:.1f}s<br>T: %{y:.2f}°C<extra></extra>'
+                },
+                // Línea vertical en t = τ
+                {
+                    x: [tau_val, tau_val],
+                    y: [PHYS.T_env, T_at_tau],
+                    mode: 'lines',
+                    line: {dash: 'dot', width: 1, color: '#ef4444'},
+                    showlegend: false,
+                    hoverinfo: 'skip'
+                }
+            ];
+
+            const layout2d = {
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: '#f8fafc',
+                margin: {t: 30, b: 50, l: 60, r: 20},
+                xaxis: {
+                    title: 'Tiempo t (s)',
+                    gridcolor: '#e2e8f0',
+                    zeroline: false
+                },
+                yaxis: {
+                    title: 'Temperatura T (°C)',
+                    gridcolor: '#e2e8f0',
+                    range: [PHYS.T_env - 2, T_inf + 5]
+                },
+                showlegend: true,
+                legend: {
+                    x: 0.02,
+                    y: 0.98,
+                    bgcolor: 'rgba(255,255,255,0.9)',
+                    bordercolor: '#e5e7eb',
+                    borderwidth: 1
+                }
+            };
+
+            Plotly.react('plot2d', data2d, layout2d, {displayModeBar: false});
+
+            // --- ACTUALIZAR ESTADÍSTICAS ---
+            const tau_val_current = tau(state.h, d.A);
+            const T_inf_current = T_equilibrio(state.h, d.A);
+            const t95_current = tiempo_95(state.h, d.A);
+            
+            document.getElementById('val-teq').innerText = T_inf_current.toFixed(2);
+            document.getElementById('val-tau').innerText = tau_val_current.toFixed(2);
+            document.getElementById('val-t95').innerText = t95_current.toFixed(1);
+            document.getElementById('h-display').innerText = `${state.h} W/m²K`;
+        }
+
+        /**
+         * Eventos
+         */
+        document.getElementById('h-slider').addEventListener('input', (e) => {
+            state.h = parseInt(e.target.value);
+            render();
+        });
+
+        function setCase(id) {
+            state.caseId = id;
+            document.querySelectorAll('.tab-btn').forEach((b, i) => {
+                if(i + 1 === id) b.classList.add('active'); 
+                else b.classList.remove('active');
+            });
+            render();
+        }
+
+        // Inicializar al cargar la página
+        window.onload = render;
+    </script>
+</body>
+</html>
