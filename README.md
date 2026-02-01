@@ -1,0 +1,1 @@
+# simulaci-n_IA_matem-ticas
